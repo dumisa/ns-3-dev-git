@@ -336,6 +336,35 @@ TcpL4Protocol::ReceiveIcmp (Ipv6Address icmpSource, uint8_t icmpTtl,
     }
 }
 
+std::string
+TcpL4Protocol::PrintIpInformation(Ipv4Header const &ipHeader,
+                                  TcpHeader const &tcpHeader)
+{
+  std::ostringstream oss;
+  oss<<"  destination IP: ";
+  ipHeader.GetDestination ().Print (oss);
+  oss<<" destination port: "<< tcpHeader.GetDestinationPort ()<<" source IP: ";
+  ipHeader.GetSource ().Print (oss);
+  oss<<" source port: "<<tcpHeader.GetSourcePort ();
+
+  return oss.str ();
+}
+
+std::string
+TcpL4Protocol::PrintIpInformation(Ipv6Header const &ipHeader,
+                                  TcpHeader const &tcpHeader)
+{
+  std::ostringstream oss;
+  oss<<"  destination IP: ";
+  (ipHeader.GetDestinationAddress ()).Print (oss);
+  oss<<" destination port: "<< tcpHeader.GetDestinationPort ()<<" source IP: ";
+  (ipHeader.GetSourceAddress ()).Print (oss);
+  oss<<" source port: "<<tcpHeader.GetSourcePort ();
+
+  return oss.str ();
+}
+
+
 enum IpL4Protocol::RxStatus
 TcpL4Protocol::Receive (Ptr<Packet> packet,
                         Ipv4Header const &ipHeader,
@@ -383,13 +412,7 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
         }
 
       NS_LOG_LOGIC ("  No endpoints matched on TcpL4Protocol "<<this);
-      std::ostringstream oss;
-      oss<<"  destination IP: ";
-      ipHeader.GetDestination ().Print (oss);
-      oss<<" destination port: "<< tcpHeader.GetDestinationPort ()<<" source IP: ";
-      ipHeader.GetSource ().Print (oss);
-      oss<<" source port: "<<tcpHeader.GetSourcePort ();
-      NS_LOG_LOGIC (oss.str ());
+      NS_LOG_LOGIC (PrintIpInformation(ipHeader, tcpHeader));
 
       if (!(tcpHeader.GetFlags () & TcpHeader::RST))
         {
@@ -465,13 +488,7 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
   if (endPoints.empty ())
     {
       NS_LOG_LOGIC ("  No IPv6 endpoints matched on TcpL4Protocol "<<this);
-      std::ostringstream oss;
-      oss<<"  destination IP: ";
-      (ipHeader.GetDestinationAddress ()).Print (oss);
-      oss<<" destination port: "<< tcpHeader.GetDestinationPort ()<<" source IP: ";
-      (ipHeader.GetSourceAddress ()).Print (oss);
-      oss<<" source port: "<<tcpHeader.GetSourcePort ();
-      NS_LOG_LOGIC (oss.str ());
+      NS_LOG_LOGIC (PrintIpInformation(ipHeader, tcpHeader));
 
       if (!(tcpHeader.GetFlags () & TcpHeader::RST))
         {

@@ -70,7 +70,34 @@ public:
   static TypeId GetTypeId (void);
   static const uint8_t PROT_NUMBER; //!< protocol number (0x6)
 
+  /**
+   * \brief Print header information (IPv4)
+   *
+   * \param ipHeader IP Header
+   * \param tcpHeader TCP header
+   * \return a string containing source, dest, and port informations
+   */
+  static std::string PrintIpInformation (Ipv4Header const &ipHeader,
+                                         TcpHeader const &tcpHeader);
+
+  /**
+   * \brief Print header information (IPv6)
+   *
+   * \param ipHeader IP Header
+   * \param tcpHeader TCP header
+   * \return a string containing source, dest, and port informations
+   */
+  static std::string PrintIpInformation (Ipv6Header const &header,
+                                         TcpHeader const &tcpHeader);
+
+  /**
+   * \brief Default constructor
+   */
   TcpL4Protocol ();
+
+  /**
+   * \brief Default deconstructor
+   */
   virtual ~TcpL4Protocol ();
 
   /**

@@ -366,7 +366,7 @@ TcpL4Protocol::PrintIpInformation(Ipv6Header const &ipHeader,
 
 enum IpL4Protocol::RxStatus
 TcpL4Protocol::PacketReceived(Ptr<Packet> packet, TcpHeader &incomingTcpHeader,
-                              Address source, Address destination)
+                              const Address &source, const Address &destination)
 {
 
   if(Node::ChecksumEnabled ())
@@ -543,7 +543,8 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
 
 void
 TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
-                           Ipv4Address saddr, Ipv4Address daddr, Ptr<NetDevice> oif)
+                           const Ipv4Address &saddr, const Ipv4Address &daddr,
+                           Ptr<NetDevice> oif) const
 {
   NS_LOG_LOGIC ("TcpL4Protocol " << this
                                  << " sending seq " << outgoing.GetSequenceNumber ()
@@ -591,7 +592,8 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
 
 void
 TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
-                           Ipv6Address saddr, Ipv6Address daddr, Ptr<NetDevice> oif)
+                           const Ipv6Address &saddr, const Ipv6Address &daddr,
+                           Ptr<NetDevice> oif) const
 {
   NS_LOG_LOGIC ("TcpL4Protocol " << this
                                  << " sending seq " << outgoing.GetSequenceNumber ()
@@ -642,7 +644,8 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
 
 void
 TcpL4Protocol::SendPacket (Ptr<Packet> pkt, const TcpHeader &outgoing,
-                           const Address &saddr, const Address &daddr, Ptr<NetDevice> oif)
+                           const Address &saddr, const Address &daddr,
+                           Ptr<NetDevice> oif) const
 {
   if (Ipv4Address::IsMatchingType (saddr))
     {

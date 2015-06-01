@@ -127,16 +127,16 @@ TcpL4Protocol::NotifyNewAggregate ()
   // functions.  Since these functions have different prototypes, we
   // need to keep track of whether we are connected to an IPv4 or
   // IPv6 lower layer and call the appropriate one.
-  
+
   if (ipv4 != 0 && m_downTarget.IsNull ())
     {
-      ipv4->Insert(this);
-      this->SetDownTarget(MakeCallback(&Ipv4::Send, ipv4));
+      ipv4->Insert (this);
+      this->SetDownTarget (MakeCallback (&Ipv4::Send, ipv4));
     }
   if (ipv6 != 0 && m_downTarget6.IsNull ())
     {
-      ipv6->Insert(this);
-      this->SetDownTarget6(MakeCallback(&Ipv6L3Protocol::Send, ipv6));
+      ipv6->Insert (this);
+      this->SetDownTarget6 (MakeCallback (&Ipv6L3Protocol::Send, ipv6));
     }
   Object::NotifyNewAggregate ();
 }
@@ -337,8 +337,8 @@ TcpL4Protocol::ReceiveIcmp (Ipv6Address icmpSource, uint8_t icmpTtl,
 }
 
 std::string
-TcpL4Protocol::PrintIpInformation(Ipv4Header const &ipHeader,
-                                  TcpHeader const &tcpHeader)
+TcpL4Protocol::PrintIpInformation (Ipv4Header const &ipHeader,
+                                   TcpHeader const &tcpHeader)
 {
   std::ostringstream oss;
   oss<<"  destination IP: ";
@@ -351,8 +351,8 @@ TcpL4Protocol::PrintIpInformation(Ipv4Header const &ipHeader,
 }
 
 std::string
-TcpL4Protocol::PrintIpInformation(Ipv6Header const &ipHeader,
-                                  TcpHeader const &tcpHeader)
+TcpL4Protocol::PrintIpInformation (Ipv6Header const &ipHeader,
+                                   TcpHeader const &tcpHeader)
 {
   std::ostringstream oss;
   oss<<"  destination IP: ";
@@ -365,8 +365,8 @@ TcpL4Protocol::PrintIpInformation(Ipv6Header const &ipHeader,
 }
 
 enum IpL4Protocol::RxStatus
-TcpL4Protocol::PacketReceived(Ptr<Packet> packet, TcpHeader &incomingTcpHeader,
-                              const Address &source, const Address &destination)
+TcpL4Protocol::PacketReceived (Ptr<Packet> packet, TcpHeader &incomingTcpHeader,
+                               const Address &source, const Address &destination)
 {
 
   if(Node::ChecksumEnabled ())
@@ -383,7 +383,7 @@ TcpL4Protocol::PacketReceived(Ptr<Packet> packet, TcpHeader &incomingTcpHeader,
                                  << " flags "<< std::hex << (int)incomingTcpHeader.GetFlags () << std::dec
                                  << " data size " << packet->GetSize ());
 
-  if(! incomingTcpHeader.IsChecksumOk ())
+  if(!incomingTcpHeader.IsChecksumOk ())
     {
       NS_LOG_INFO ("Bad checksum, dropping packet!");
       return IpL4Protocol::RX_CSUM_FAILED;
@@ -393,11 +393,11 @@ TcpL4Protocol::PacketReceived(Ptr<Packet> packet, TcpHeader &incomingTcpHeader,
 }
 
 void
-TcpL4Protocol::NoEndPointsFound(const TcpHeader &incomingHeader,
-                                const Address &incomingSAddr,
-                                const Address &incomingDAddr)
+TcpL4Protocol::NoEndPointsFound (const TcpHeader &incomingHeader,
+                                 const Address &incomingSAddr,
+                                 const Address &incomingDAddr)
 {
-  if (! (incomingHeader.GetFlags () & TcpHeader::RST))
+  if (!(incomingHeader.GetFlags () & TcpHeader::RST))
     {
       // build a RST packet and send
       Ptr<Packet> rstPacket = Create<Packet> ();
@@ -474,8 +474,8 @@ TcpL4Protocol::Receive (Ptr<Packet> packet,
       NS_LOG_LOGIC ("  No endpoints matched on TcpL4Protocol "<<this);
       NS_LOG_LOGIC (PrintIpInformation (incomingIpHeader, incomingTcpHeader));
 
-      NoEndPointsFound (incomingTcpHeader, incomingIpHeader.GetSource(),
-                        incomingIpHeader.GetDestination());
+      NoEndPointsFound (incomingTcpHeader, incomingIpHeader.GetSource (),
+                        incomingIpHeader.GetDestination ());
 
       return IpL4Protocol::RX_ENDPOINT_CLOSED;
 
@@ -605,7 +605,7 @@ TcpL4Protocol::SendPacket (Ptr<Packet> packet, const TcpHeader &outgoing,
 
   if (daddr.IsIpv4MappedAddress ())
     {
-      return (SendPacket (packet, outgoing, saddr.GetIpv4MappedAddress(), daddr.GetIpv4MappedAddress(), oif));
+      return (SendPacket (packet, outgoing, saddr.GetIpv4MappedAddress (), daddr.GetIpv4MappedAddress (), oif));
     }
   TcpHeader outgoingHeader = outgoing;
   /** \todo UrgentPointer */
@@ -674,7 +674,7 @@ TcpL4Protocol::AddSocket (Ptr<TcpSocketBase> socket)
 {
   std::vector<Ptr<TcpSocketBase> >::iterator it = m_sockets.begin ();
 
-  while (it != m_sockets.end())
+  while (it != m_sockets.end ())
     {
       if (*it == socket)
         {
@@ -684,19 +684,19 @@ TcpL4Protocol::AddSocket (Ptr<TcpSocketBase> socket)
       ++it;
     }
 
-   m_sockets.push_back (socket);
+  m_sockets.push_back (socket);
 }
 
 bool
-TcpL4Protocol::RemoveSocket(Ptr<TcpSocketBase> socket)
+TcpL4Protocol::RemoveSocket (Ptr<TcpSocketBase> socket)
 {
   std::vector<Ptr<TcpSocketBase> >::iterator it = m_sockets.begin ();
 
-  while (it != m_sockets.end())
+  while (it != m_sockets.end ())
     {
       if (*it == socket)
         {
-          m_sockets.erase(it);
+          m_sockets.erase (it);
           return true;
         }
 

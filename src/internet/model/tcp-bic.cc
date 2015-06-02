@@ -89,39 +89,10 @@ TcpBic::Reset ()
 }
 
 void
-TcpBic::SetInitialSSThresh (uint32_t threshold)
-{
-  NS_LOG_FUNCTION (this << threshold);
-  m_ssThresh = threshold;
-}
-
-uint32_t
-TcpBic::GetInitialSSThresh (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return m_ssThresh;
-}
-
-void
-TcpBic::SetInitialCwnd (uint32_t cWnd)
-{
-  NS_LOG_FUNCTION (this << cWnd);
-  m_initialCwnd = cWnd;
-}
-
-uint32_t
-TcpBic::GetInitialCwnd (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return m_initialCwnd;
-}
-
-void
 TcpBic::Init ()
 {
   NS_LOG_FUNCTION (this);
 
-  m_cWnd = m_initialCwnd * m_segmentSize;
   m_bicState = OPEN;
 }
 
@@ -382,13 +353,6 @@ TcpBic::Window (void)
 
   /* Limit the size of in-flight data by cwnd and receiver's rxwin */
   return std::min (m_rWnd.Get (), m_cWnd.Get ());
-}
-
-void
-TcpBic::ScaleSsThresh (uint8_t scaleFactor)
-{
-  NS_LOG_FUNCTION (this << static_cast<int> (scaleFactor));
-  m_ssThresh <<= scaleFactor;
 }
 
 } // namespace ns3

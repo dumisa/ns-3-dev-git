@@ -148,8 +148,6 @@ TcpCubic::Init ()
 {
   NS_LOG_FUNCTION (this);
 
-  m_cWnd = m_initialCwnd * m_segmentSize;
-
   m_cubicState = OPEN;
 }
 
@@ -169,36 +167,6 @@ TcpCubic::Connect (const Address & address)
 
   return TcpSocketBase::Connect (address);
 }
-
-
-void
-TcpCubic::SetInitialSSThresh (uint32_t threshold)
-{
-  NS_LOG_FUNCTION (this);
-  m_ssThresh = threshold;
-}
-
-uint32_t
-TcpCubic::GetInitialSSThresh (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return m_ssThresh;
-}
-
-void
-TcpCubic::SetInitialCwnd (uint32_t cwnd)
-{
-  NS_LOG_FUNCTION (this);
-  m_initialCwnd = cwnd;
-}
-
-uint32_t
-TcpCubic::GetInitialCwnd (void) const
-{
-  NS_LOG_FUNCTION (this);
-  return m_initialCwnd;
-}
-
 
 void
 TcpCubic::NewAck (SequenceNumber32 const& seq)
@@ -526,12 +494,4 @@ TcpCubic::Window (void)
   return std::min (m_rWnd.Get (), m_cWnd.Get ());
 }
 
-void
-TcpCubic::ScaleSsThresh (uint8_t scaleFactor)
-{
-  NS_LOG_FUNCTION (this << scaleFactor);
-
-  m_ssThresh <<= scaleFactor;
-}
-
-}
+} // namespace ns-3

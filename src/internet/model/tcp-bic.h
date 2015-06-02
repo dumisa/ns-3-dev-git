@@ -105,13 +105,6 @@ protected:
   virtual void DupAck (const TcpHeader& t, uint32_t count);    // Halving cwnd and reset nextTxSequence
   virtual void Retransmit (void);   // Exit fast recovery upon retransmit timeout
 
-  // Implementing ns3::TcpSocket -- Attribute get/set
-  virtual void     SetInitialSSThresh (uint32_t threshold);
-  virtual uint32_t GetInitialSSThresh (void) const;
-  virtual void     SetInitialCwnd (uint32_t cwnd);
-  virtual uint32_t GetInitialCwnd (void) const;
-  virtual void     ScaleSsThresh (uint8_t scaleFactor);
-
 private:
   uint32_t m_initialCwnd;      //!< Initial cWnd
 

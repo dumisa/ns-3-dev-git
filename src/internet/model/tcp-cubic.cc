@@ -88,14 +88,6 @@ TcpCubic::GetTypeId (void)
                    DoubleValue (0.4),
                    MakeDoubleAccessor (&TcpCubic::m_c),
                    MakeDoubleChecker <double> (0.0))
-    .AddTraceSource ("CongestionWindow",
-                     "The TCP connection's congestion window",
-                     MakeTraceSourceAccessor (&TcpCubic::m_cWnd),
-                     "ns3::TracedValue::Uint32Callback")
-    .AddTraceSource ("SlowStartThreshold",
-                     "TCP slow start threshold (bytes)",
-                     MakeTraceSourceAccessor (&TcpCubic::m_ssThresh),
-                     "ns3::TracedValue::Uint32Callback")
     .AddTraceSource ("CubicState",
                      "State of TCP Cubic",
                      MakeTraceSourceAccessor (&TcpCubic::m_cubicState),

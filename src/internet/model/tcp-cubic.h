@@ -106,10 +106,6 @@ protected:
   virtual uint32_t GetInitialCwnd (void) const;
   virtual void     ScaleSsThresh (uint8_t scaleFactor);
 
-protected:
-  TracedValue<uint32_t>     m_cWnd;      //!< Congestion window
-  TracedValue<uint32_t>     m_ssThresh;  //!< Slow start threshold
-
 private:
   /**
    * \brief Values to detect the Slow Start mode of HyStart

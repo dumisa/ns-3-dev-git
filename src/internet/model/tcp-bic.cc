@@ -65,14 +65,6 @@ TcpBic::GetTypeId (void)
                    UintegerValue (3),
                    MakeUintegerAccessor (&TcpBic::m_retxThresh),
                    MakeUintegerChecker<uint32_t> ())
-    .AddTraceSource ("CongestionWindow",
-                     "The TCP connection's congestion window",
-                     MakeTraceSourceAccessor (&TcpBic::m_cWnd),
-                     "ns3::TracedValue::Uint32Callback")
-    .AddTraceSource ("SlowStartThreshold",
-                     "TCP slow start threshold (bytes)",
-                     MakeTraceSourceAccessor (&TcpBic::m_ssThresh),
-                     "ns3::TracedValue::Uint32Callback")
     .AddTraceSource ("BicState",
                      "State of TCP BIC",
                      MakeTraceSourceAccessor (&TcpBic::m_bicState),

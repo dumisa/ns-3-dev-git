@@ -229,6 +229,10 @@ int main (int argc, char *argv[])
     {
       Config::SetDefault ("ns3::TcpL4Protocol::SocketType", TypeIdValue (TcpReno::GetTypeId ()));
     }
+  else if (transport_prot.compare ("TcpT") == 0)
+    {
+      Config::SetDefault ("ns3::TcpL4Protocol::SocketType", TypeIdValue (TcpT::GetTypeId ()));
+    }
   else if (transport_prot.compare ("TcpNewReno") == 0)
     {
       Config::SetDefault ("ns3::TcpL4Protocol::SocketType", TypeIdValue (TcpNewReno::GetTypeId ()));
@@ -310,6 +314,7 @@ int main (int argc, char *argv[])
 
       if (transport_prot.compare ("TcpTahoe") == 0
           || transport_prot.compare ("TcpReno") == 0
+          || transport_prot.compare ("TcpT") == 0
           || transport_prot.compare ("TcpNewReno") == 0
           || transport_prot.compare ("TcpWestwood") == 0
           || transport_prot.compare ("TcpWestwoodPlus") == 0)

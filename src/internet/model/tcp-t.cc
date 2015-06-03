@@ -67,6 +67,8 @@ void
 TcpT::NewAck(const SequenceNumber32 &seq)
 {
   TcpSocketBase::NewAck (seq);
+
+  m_cWnd = UnAckDataCount ();
 }
 
 void
@@ -80,9 +82,16 @@ TcpT::IncrCwnd()
 {
   NS_LOG_UNCOND (Simulator::Now().GetSeconds() << " HO CHIAMATO INCR");
 
-  m_timer.SetDelay(Time::FromDouble(1.0, Time::S));
-  m_timer.SetFunction (&TcpT::IncrCwnd, this);
-  m_timer.Schedule();
+  m_cWnd = UnAckDataCount () + 10000;
+
+  SendPendingData (true);
+
+  if (! Simulator::IsFinished())
+    {
+      m_timer.SetDelay(Time::FromDouble(1.0, Time::S));
+      m_timer.SetFunction (&TcpT::IncrCwnd, this);
+      m_timer.Schedule();
+    }
 }
 
 int

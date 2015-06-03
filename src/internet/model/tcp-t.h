@@ -22,6 +22,7 @@
 #define TCP_T_H
 
 #include "tcp-newreno.h"
+#include "ns3/timer.h"
 
 namespace ns3 {
 
@@ -52,10 +53,16 @@ public:
   TcpT (const TcpT& sock);
   virtual ~TcpT (void);
 
+  virtual int Connect (const Address &address);
+
 protected:
   virtual void NewAck (SequenceNumber32 const& seq); // Inc cwnd and call NewAck() of parent
   virtual void DupAck (const TcpHeader& t, uint32_t count);  // Halving cwnd and reset nextTxSequence
   virtual void Retransmit (void); // Exit fast recovery upon retransmit timeout
+
+  void IncrCwnd ();
+
+  Timer m_timer;
 };
 
 } // namespace ns3

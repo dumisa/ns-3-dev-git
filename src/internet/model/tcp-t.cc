@@ -75,4 +75,22 @@ TcpT::Retransmit()
   TcpSocketBase::Retransmit();
 }
 
+void
+TcpT::IncrCwnd()
+{
+  NS_LOG_UNCOND ("HO CHIAMATO INCR");
+}
+
+int
+TcpT::Connect(const Address &address)
+{
+  int ret = TcpSocketBase::Connect(address);
+
+  m_timer.SetDelay(Time::FromDouble(1.0, Time::S));
+  m_timer.SetFunction (&TcpT::IncrCwnd, this);
+  m_timer.Schedule();
+
+  return ret;
+}
+
 } // namespace ns3

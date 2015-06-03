@@ -18,9 +18,6 @@
  * Author: Adrian Sai-wah Tam <adrian.sw.tam@gmail.com>
  */
 
-#define NS_LOG_APPEND_CONTEXT \
-  if (m_node) { std::clog << Simulator::Now ().GetSeconds () << " [node " << m_node->GetId () << "] "; }
-
 #include "tcp-t.h"
 #include "ns3/log.h"
 #include "ns3/trace-source-accessor.h"
@@ -38,7 +35,7 @@ TypeId
 TcpT::GetTypeId (void)
 {
   static TypeId tid = TypeId ("ns3::TcpT")
-    .SetParent<TcpSocketBase> ()
+    .SetParent<TcpNewReno> ()
     .SetGroupName ("Internet")
     .AddConstructor<TcpT> ()
  ;
@@ -51,7 +48,7 @@ TcpT::TcpT (void)
 }
 
 TcpT::TcpT (const TcpT& sock)
-  : TcpSocketBase (sock)
+  : TcpNewReno (sock)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -59,6 +56,23 @@ TcpT::TcpT (const TcpT& sock)
 
 TcpT::~TcpT (void)
 {
+}
+
+void
+TcpT::DupAck(const TcpHeader &t, uint32_t count)
+{
+}
+
+void
+TcpT::NewAck(const SequenceNumber32 &seq)
+{
+  TcpSocketBase::NewAck (seq);
+}
+
+void
+TcpT::Retransmit()
+{
+  TcpSocketBase::Retransmit();
 }
 
 } // namespace ns3

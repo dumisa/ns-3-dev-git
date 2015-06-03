@@ -18,10 +18,10 @@
  * Author: Adrian Sai-wah Tam <adrian.sw.tam@gmail.com>
  */
 
-#ifndef TCP_NEWRENO_H
-#define TCP_NEWRENO_H
+#ifndef TCP_T_H
+#define TCP_T_H
 
-#include "tcp-socket-base.h"
+#include "tcp-newreno.h"
 
 namespace ns3 {
 
@@ -33,7 +33,7 @@ namespace ns3 {
  *
  * This class contains the NewReno implementation of TCP, as of \RFC{2582}.
  */
-class TcpT : public TcpSocketBase
+class TcpT : public TcpNewReno
 {
 public:
   /**
@@ -51,8 +51,13 @@ public:
    */
   TcpT (const TcpT& sock);
   virtual ~TcpT (void);
+
+protected:
+  virtual void NewAck (SequenceNumber32 const& seq); // Inc cwnd and call NewAck() of parent
+  virtual void DupAck (const TcpHeader& t, uint32_t count);  // Halving cwnd and reset nextTxSequence
+  virtual void Retransmit (void); // Exit fast recovery upon retransmit timeout
 };
 
 } // namespace ns3
 
-#endif /* TCP_NEWRENO_H */
+#endif /* TCP_T_H */

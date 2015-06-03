@@ -78,7 +78,11 @@ TcpT::Retransmit()
 void
 TcpT::IncrCwnd()
 {
-  NS_LOG_UNCOND ("HO CHIAMATO INCR");
+  NS_LOG_UNCOND (Simulator::Now().GetSeconds() << " HO CHIAMATO INCR");
+
+  m_timer.SetDelay(Time::FromDouble(1.0, Time::S));
+  m_timer.SetFunction (&TcpT::IncrCwnd, this);
+  m_timer.Schedule();
 }
 
 int

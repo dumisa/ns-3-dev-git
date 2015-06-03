@@ -330,6 +330,7 @@ def build(bld):
         'model/tcp-tahoe.h',
         'model/tcp-reno.h',
         'model/tcp-newreno.h',
+        'model/tcp-t.h',
         'model/tcp-westwood.h',
         'model/tcp-socket-base.h',
         'model/tcp-tx-buffer.h',

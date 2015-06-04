@@ -485,13 +485,4 @@ TcpCubic::Fork (void)
   return CopyObject<TcpCubic> (this);
 }
 
-uint32_t
-TcpCubic::Window (void)
-{
-  NS_LOG_FUNCTION (this);
-
-  /* Limit the size of in-flight data by cwnd and receiver's rxwin */
-  return std::min (m_rWnd.Get (), m_cWnd.Get ());
-}
-
 } // namespace ns-3

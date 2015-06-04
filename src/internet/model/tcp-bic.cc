@@ -346,13 +346,4 @@ TcpBic::Fork (void)
   return CopyObject<TcpBic> (this);
 }
 
-uint32_t
-TcpBic::Window (void)
-{
-  NS_LOG_FUNCTION (this);
-
-  /* Limit the size of in-flight data by cwnd and receiver's rxwin */
-  return std::min (m_rWnd.Get (), m_cWnd.Get ());
-}
-
 } // namespace ns3

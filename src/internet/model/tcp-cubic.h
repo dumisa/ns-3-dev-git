@@ -93,7 +93,6 @@ public:
 
 protected:
   // From TcpSocketBase
-  virtual uint32_t Window (void);
   virtual Ptr<TcpSocketBase> Fork (void);
   virtual void NewAck (SequenceNumber32 const& seq);
   virtual void DupAck (const TcpHeader& t, uint32_t count);

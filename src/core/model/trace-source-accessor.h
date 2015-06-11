@@ -101,7 +101,7 @@ public:
  * \ingroup tracing
  *
  * Create a TraceSourceAccessor which will control access to the underlying
- * trace source.
+ * trace source from a member variable.
  *
  * This helper template method assumes that the underlying
  * type implements a statically-polymorphic set of Connect and Disconnect
@@ -109,11 +109,29 @@ public:
  * static-polymorphic class.  This functionality is typically provided
  * by wrapping an object data member in a TracedCallback.
  *
- * \param a the trace source
+ * \param a The trace source
  * \returns The TraceSourceAccessor
  */
 template <typename T>
 Ptr<const TraceSourceAccessor> MakeTraceSourceAccessor (T a);
+
+/**
+ * \ingroup tracing
+ *
+ * Create a TraceSourceAccessor which will control access to the underlying
+ * trace source from a member function.
+ *
+ * This helper template method assumes that the underlying type of the variable
+ * returned from the member function  implements a statically-polymorphic set of
+ * Connect and Disconnect methods and creates a dynamic-polymorphic class to
+ * wrap the underlying static-polymorphic class.  This functionality is typically
+ * provided by wrapping the returned object data member in a TracedCallback.
+ *
+ * \param a The member function which returns the trace source
+ * \returns The TraceSourceAccessor
+ */
+template <typename T>
+Ptr<const TraceSourceAccessor> MakeTraceSourceAccessorFn (T a);
 
 } // namespace ns3
 
@@ -185,6 +203,69 @@ template <typename T>
 Ptr<const TraceSourceAccessor> MakeTraceSourceAccessor (T a)
 {
   return DoMakeTraceSourceAccessor (a);
+}
+
+/**
+ * \ingroup tracing
+ * MakeTraceSourceAccessorFn() implementation.
+ *
+ * \tparam T Class type of the TracedCallback
+ * \tparam SOURCE Type of the underlying value.
+ * \param a The underlying member function which returns the data value.
+ * \returns The TraceSourceAccessor
+ */
+template <typename T, typename SOURCE>
+Ptr<const TraceSourceAccessor>
+DoMakeTraceSourceAccessorFn (SOURCE T::*a)
+{
+  struct Accessor : public TraceSourceAccessor
+  {
+    virtual bool ConnectWithoutContext (ObjectBase *obj, const CallbackBase &cb) const {
+      T *p = dynamic_cast<T*> (obj);
+      if (p == 0)
+        {
+          return false;
+        }
+      (p->*m_source)().ConnectWithoutContext (cb);
+      return true;
+    }
+    virtual bool Connect (ObjectBase *obj, std::string context, const CallbackBase &cb) const {
+      T *p = dynamic_cast<T*> (obj);
+      if (p == 0)
+        {
+          return false;
+        }
+      (p->*m_source)().Connect (cb, context);
+      return true;
+    }
+    virtual bool DisconnectWithoutContext (ObjectBase *obj, const CallbackBase &cb) const {
+      T *p = dynamic_cast<T*> (obj);
+      if (p == 0)
+        {
+          return false;
+        }
+      (p->*m_source)().DisconnectWithoutContext (cb);
+      return true;
+    }
+    virtual bool Disconnect (ObjectBase *obj, std::string context, const CallbackBase &cb) const {
+      T *p = dynamic_cast<T*> (obj);
+      if (p == 0)
+        {
+          return false;
+        }
+      (p->*m_source)().Disconnect (cb, context);
+      return true;
+    }
+    SOURCE T::*m_source;
+  } *accessor = new Accessor ();
+  accessor->m_source = a;
+  return Ptr<const TraceSourceAccessor> (accessor, false);
+}
+
+template <typename T>
+Ptr<const TraceSourceAccessor> MakeTraceSourceAccessorFn (T a)
+{
+  return DoMakeTraceSourceAccessorFn (a);
 }
 
 } // namespace ns3

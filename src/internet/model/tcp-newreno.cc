@@ -41,10 +41,6 @@ TcpNewReno::GetTypeId (void)
     .SetParent<TcpSocketBase> ()
     .SetGroupName ("Internet")
     .AddConstructor<TcpNewReno> ()
-    .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
-                    UintegerValue (3),
-                    MakeUintegerAccessor (&TcpNewReno::m_retxThresh),
-                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("LimitedTransmit", "Enable limited transmit",
                    BooleanValue (false),
                    MakeBooleanAccessor (&TcpNewReno::m_limitedTx),
@@ -54,8 +50,7 @@ TcpNewReno::GetTypeId (void)
 }
 
 TcpNewReno::TcpNewReno (void)
-  : m_retxThresh (3), // mute valgrind, actual value set by the attribute system
-    m_inFastRec (false),
+  : TcpSocketBase (),
     m_limitedTx (false) // mute valgrind, actual value set by the attribute system
 {
   NS_LOG_FUNCTION (this);
@@ -63,8 +58,6 @@ TcpNewReno::TcpNewReno (void)
 
 TcpNewReno::TcpNewReno (const TcpNewReno& sock)
   : TcpSocketBase (sock),
-    m_retxThresh (sock.m_retxThresh),
-    m_inFastRec (false),
     m_limitedTx (sock.m_limitedTx)
 {
   NS_LOG_FUNCTION (this);

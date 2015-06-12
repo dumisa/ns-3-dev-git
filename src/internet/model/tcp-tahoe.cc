@@ -41,22 +41,17 @@ TcpTahoe::GetTypeId (void)
     .SetParent<TcpSocketBase> ()
     .SetGroupName ("Internet")
     .AddConstructor<TcpTahoe> ()
-    .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
-                    UintegerValue (3),
-                    MakeUintegerAccessor (&TcpTahoe::m_retxThresh),
-                    MakeUintegerChecker<uint32_t> ())
   ;
   return tid;
 }
 
-TcpTahoe::TcpTahoe (void) : m_retxThresh (3)
+TcpTahoe::TcpTahoe (void) : TcpSocketBase ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 TcpTahoe::TcpTahoe (const TcpTahoe& sock)
-  : TcpSocketBase (sock),
-    m_retxThresh (sock.m_retxThresh)
+  : TcpSocketBase (sock)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");

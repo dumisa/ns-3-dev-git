@@ -123,7 +123,6 @@ private:
   TracedValue<uint8_t>  m_bicState; //!< Bic state
 
   uint8_t  m_b;                     //!< Binary search coefficient
-  uint32_t m_retxThresh;            //!< Fast Retransmit threshold
 
 private:
   /**

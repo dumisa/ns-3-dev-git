@@ -69,7 +69,6 @@ TcpWestwood::GetTypeId (void)
 }
 
 TcpWestwood::TcpWestwood (void) :
-  m_inFastRec(false),
   m_currentBW(0),
   m_lastSampleBW(0),
   m_lastBW(0),
@@ -85,7 +84,6 @@ TcpWestwood::TcpWestwood (void) :
 
 TcpWestwood::TcpWestwood (const TcpWestwood& sock) :
   TcpSocketBase(sock),
-  m_inFastRec(false),
   m_currentBW(sock.m_currentBW),
   m_lastSampleBW(sock.m_lastSampleBW),
   m_lastBW(sock.m_lastBW),

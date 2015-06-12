@@ -41,23 +41,17 @@ TcpReno::GetTypeId (void)
     .SetParent<TcpSocketBase> ()
     .SetGroupName ("Internet")
     .AddConstructor<TcpReno> ()
-    .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
-                    UintegerValue (3),
-                    MakeUintegerAccessor (&TcpReno::m_retxThresh),
-                    MakeUintegerChecker<uint32_t> ())
   ;
   return tid;
 }
 
-TcpReno::TcpReno (void) : m_retxThresh (3), m_inFastRec (false)
+TcpReno::TcpReno (void) : TcpSocketBase ()
 {
   NS_LOG_FUNCTION (this);
 }
 
 TcpReno::TcpReno (const TcpReno& sock)
-  : TcpSocketBase (sock),
-    m_retxThresh (sock.m_retxThresh),
-    m_inFastRec (false)
+  : TcpSocketBase (sock)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");

@@ -146,8 +146,6 @@ private:
   void Filtering (void);
 
 protected:
-  bool                   m_inFastRec;              //!< Currently in fast recovery if TRUE
-
   TracedValue<double>    m_currentBW;              //!< Current value of the estimated BW
   double                 m_lastSampleBW;           //!< Last bandwidth sample
   double                 m_lastBW;                 //!< Last bandwidth sample after being filtered

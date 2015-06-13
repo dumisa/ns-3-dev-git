@@ -73,31 +73,31 @@ TcpReno::NewAck (const SequenceNumber32& seq)
 {
   NS_LOG_FUNCTION (this << seq);
   NS_LOG_LOGIC ("TcpReno receieved ACK for seq " << seq <<
-                " cwnd " << m_cWnd <<
-                " ssthresh " << m_ssThresh);
+                " cwnd " << m_sState->m_cWnd <<
+                " ssthresh " << m_sState->m_ssThresh);
 
   // Check for exit condition of fast recovery
-  if (m_inFastRec)
+  if (m_sState->m_inFastRec)
     { // RFC2001, sec.4; RFC2581, sec.3.2
       // First new ACK after fast recovery: reset cwnd
-      m_cWnd = m_ssThresh;
-      m_inFastRec = false;
-      NS_LOG_INFO ("Reset cwnd to " << m_cWnd);
+      m_sState->m_cWnd = m_sState->m_ssThresh;
+      m_sState->m_inFastRec = false;
+      NS_LOG_INFO ("Reset cwnd to " << m_sState->m_cWnd);
     };
 
   // Increase of cwnd based on current phase (slow start or congestion avoidance)
-  if (m_cWnd < m_ssThresh)
-    { // Slow start mode, add one segSize to cWnd. Default m_ssThresh is 65535. (RFC2001, sec.1)
-      m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+  if (m_sState->m_cWnd < m_sState->m_ssThresh)
+    { // Slow start mode, add one segSize to cWnd. Default m_sState->m_ssThresh is 65535. (RFC2001, sec.1)
+      m_sState->m_cWnd += m_sState->m_segmentSize;
+      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_sState->m_cWnd << " ssthresh " << m_sState->m_ssThresh);
     }
   else
     { // Congestion avoidance mode, increase by (segSize*segSize)/cwnd. (RFC2581, sec.3.1)
       // To increase cwnd for one segSize per RTT, it should be (ackBytes*segSize)/cwnd
-      double adder = static_cast<double> (m_segmentSize * m_segmentSize) / m_cWnd.Get ();
+      double adder = static_cast<double> (m_sState->m_segmentSize * m_sState->m_segmentSize) / m_sState->m_cWnd.Get ();
       adder = std::max (1.0, adder);
-      m_cWnd += static_cast<uint32_t> (adder);
-      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+      m_sState->m_cWnd += static_cast<uint32_t> (adder);
+      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_sState->m_cWnd << " ssthresh " << m_sState->m_ssThresh);
     }
 
   // Complete newAck processing
@@ -109,18 +109,18 @@ void
 TcpReno::DupAck (const TcpHeader& t, uint32_t count)
 {
   NS_LOG_FUNCTION (this << "t " << count);
-  if (count == m_retxThresh && !m_inFastRec)
+  if (count == m_sState->m_retxThresh && !m_sState->m_inFastRec)
     { // triple duplicate ack triggers fast retransmit (RFC2581, sec.3.2)
-      m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
-      m_cWnd = m_ssThresh + 3 * m_segmentSize;
-      m_inFastRec = true;
-      NS_LOG_INFO ("Triple dupack. Reset cwnd to " << m_cWnd << ", ssthresh to " << m_ssThresh);
+      m_sState->m_ssThresh = std::max (2 * m_sState->m_segmentSize, BytesInFlight () / 2);
+      m_sState->m_cWnd = m_sState->m_ssThresh + 3 * m_sState->m_segmentSize;
+      m_sState->m_inFastRec = true;
+      NS_LOG_INFO ("Triple dupack. Reset cwnd to " << m_sState->m_cWnd << ", ssthresh to " << m_sState->m_ssThresh);
       DoRetransmit ();
     }
-  else if (m_inFastRec)
+  else if (m_sState->m_inFastRec)
     { // In fast recovery, inc cwnd for every additional dupack (RFC2581, sec.3.2)
-      m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("Increased cwnd to " << m_cWnd);
+      m_sState->m_cWnd += m_sState->m_segmentSize;
+      NS_LOG_INFO ("Increased cwnd to " << m_sState->m_cWnd);
       if (!m_sendPendingDataEvent.IsRunning ())
         {
           SendPendingData (m_connected);
@@ -133,7 +133,7 @@ void TcpReno::Retransmit (void)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ());
-  m_inFastRec = false;
+  m_sState->m_inFastRec = false;
 
   // If erroneous timeout in closed/timed-wait state, just return
   if (m_state == CLOSED || m_state == TIME_WAIT) return;
@@ -143,11 +143,11 @@ void TcpReno::Retransmit (void)
   // According to RFC2581 sec.3.1, upon RTO, ssthresh is set to half of flight
   // size and cwnd is set to 1*MSS, then the lost packet is retransmitted and
   // TCP back to slow start
-  m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
-  m_cWnd = m_segmentSize;
+  m_sState->m_ssThresh = std::max (2 * m_sState->m_segmentSize, BytesInFlight () / 2);
+  m_sState->m_cWnd = m_sState->m_segmentSize;
   m_nextTxSequence = m_txBuffer->HeadSequence (); // Restart from highest Ack
-  NS_LOG_INFO ("RTO. Reset cwnd to " << m_cWnd <<
-               ", ssthresh to " << m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
+  NS_LOG_INFO ("RTO. Reset cwnd to " << m_sState->m_cWnd <<
+               ", ssthresh to " << m_sState->m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
   DoRetransmit ();                          // Retransmit the packet
 }
 

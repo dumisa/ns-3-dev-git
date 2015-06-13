@@ -116,29 +116,29 @@ TcpWestwood::NewAck (const SequenceNumber32& seq)
 { // Same as Reno
   NS_LOG_FUNCTION (this << seq);
   NS_LOG_LOGIC ("TcpWestwood receieved ACK for seq " << seq <<
-                " cwnd " << m_cWnd <<
-                " ssthresh " << m_ssThresh);
+                " cwnd " << m_sState->m_cWnd <<
+                " ssthresh " << m_sState->m_ssThresh);
 
   // Check for exit condition of fast recovery
-  if (m_inFastRec)
+  if (m_sState->m_inFastRec)
     {// First new ACK after fast recovery, reset cwnd as in Reno
-      m_cWnd = m_ssThresh;
-      m_inFastRec = false;
-      NS_LOG_INFO ("Reset cwnd to " << m_cWnd);
+      m_sState->m_cWnd = m_sState->m_ssThresh;
+      m_sState->m_inFastRec = false;
+      NS_LOG_INFO ("Reset cwnd to " << m_sState->m_cWnd);
     };
 
   // Increase of cwnd based on current phase (slow start or congestion avoidance)
-  if (m_cWnd < m_ssThresh)
+  if (m_sState->m_cWnd < m_sState->m_ssThresh)
     { // Slow start mode, add one segSize to cWnd as in Reno
-      m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+      m_sState->m_cWnd += m_sState->m_segmentSize;
+      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_sState->m_cWnd << " ssthresh " << m_sState->m_ssThresh);
     }
   else
     { // Congestion avoidance mode, increase by (segSize*segSize)/cwnd as in Reno
-      double adder = static_cast<double> (m_segmentSize * m_segmentSize) / m_cWnd.Get();
+      double adder = static_cast<double> (m_sState->m_segmentSize * m_sState->m_segmentSize) / m_sState->m_cWnd.Get();
       adder = std::max(1.0, adder);
-      m_cWnd += static_cast<uint32_t>(adder);
-      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+      m_sState->m_cWnd += static_cast<uint32_t>(adder);
+      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_sState->m_cWnd << " ssthresh " << m_sState->m_ssThresh);
     }
 
   // Complete newAck processing
@@ -179,14 +179,14 @@ TcpWestwood::EstimateBW (int acked, const TcpHeader& tcpHeader, Time rtt)
       // Get the time when the current ACK is received
       double currentAck = static_cast<double> (Simulator::Now().GetSeconds());
       // Calculate the BW
-      m_currentBW = acked * m_segmentSize / (currentAck - m_lastAck);
+      m_currentBW = acked * m_sState->m_segmentSize / (currentAck - m_lastAck);
       // Update the last ACK time
       m_lastAck = currentAck;
     }
   else if (m_pType == TcpWestwood::WESTWOODPLUS)
     {
       // Calculate the BW
-      m_currentBW = m_ackedSegments * m_segmentSize / rtt.GetSeconds();
+      m_currentBW = m_ackedSegments * m_sState->m_segmentSize / rtt.GetSeconds();
       // Reset m_ackedSegments and m_IsCount for the next sampling
       m_ackedSegments = 0;
       m_IsCount = false;
@@ -202,7 +202,7 @@ TcpWestwood::CountAck (const TcpHeader& tcpHeader)
   NS_LOG_FUNCTION (this);
 
   // Calculate the number of acknowledged segments based on the received ACK number
-  int cumul_ack = (tcpHeader.GetAckNumber() - m_prevAckNo) / m_segmentSize;
+  int cumul_ack = (tcpHeader.GetAckNumber() - m_prevAckNo) / m_sState->m_segmentSize;
 
   if (cumul_ack == 0)
     {// A DUPACK counts for 1 segment delivered successfully
@@ -239,24 +239,24 @@ TcpWestwood::UpdateAckedSegments (int acked)
 void
 TcpWestwood::DupAck (const TcpHeader& header, uint32_t count)
 {
-  NS_LOG_FUNCTION (this << count << m_cWnd);
+  NS_LOG_FUNCTION (this << count << m_sState->m_cWnd);
 
-  if (count == 3 && !m_inFastRec)
+  if (count == 3 && !m_sState->m_inFastRec)
     {// Triple duplicate ACK triggers fast retransmit
      // Adjust cwnd and ssthresh based on the estimated BW
-      m_ssThresh = uint32_t(m_currentBW * static_cast<double> (m_minRtt.GetSeconds()));
-      if (m_cWnd > m_ssThresh)
+      m_sState->m_ssThresh = uint32_t(m_currentBW * static_cast<double> (m_minRtt.GetSeconds()));
+      if (m_sState->m_cWnd > m_sState->m_ssThresh)
         {
-          m_cWnd = m_ssThresh;
+          m_sState->m_cWnd = m_sState->m_ssThresh;
         }
-      m_inFastRec = true;
-      NS_LOG_INFO ("Triple dupack. Enter fast recovery mode. Reset cwnd to " << m_cWnd <<", ssthresh to " << m_ssThresh);
+      m_sState->m_inFastRec = true;
+      NS_LOG_INFO ("Triple dupack. Enter fast recovery mode. Reset cwnd to " << m_sState->m_cWnd <<", ssthresh to " << m_sState->m_ssThresh);
       DoRetransmit ();
     }
-  else if (m_inFastRec)
+  else if (m_sState->m_inFastRec)
     {// Increase cwnd for every additional DUPACK as in Reno
-      m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("Dupack in fast recovery mode. Increase cwnd to " << m_cWnd);
+      m_sState->m_cWnd += m_sState->m_segmentSize;
+      NS_LOG_INFO ("Dupack in fast recovery mode. Increase cwnd to " << m_sState->m_cWnd);
       if (!m_sendPendingDataEvent.IsRunning ())
         {
           SendPendingData (m_connected);
@@ -269,7 +269,7 @@ TcpWestwood::Retransmit (void)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC (this << " ReTxTimeout Expired at time " << Simulator::Now ().GetSeconds ());
-  m_inFastRec = false;
+  m_sState->m_inFastRec = false;
 
   // If erroneous timeout in closed/timed-wait state, just return
   if (m_state == CLOSED || m_state == TIME_WAIT)
@@ -279,13 +279,13 @@ TcpWestwood::Retransmit (void)
     return;
 
   // Upon an RTO, adjust cwnd and ssthresh based on the estimated BW
-  m_ssThresh = std::max (static_cast<double> (2 * m_segmentSize), m_currentBW.Get () * static_cast<double> (m_minRtt.GetSeconds ()));
-  m_cWnd = m_segmentSize;
+  m_sState->m_ssThresh = std::max (static_cast<double> (2 * m_sState->m_segmentSize), m_currentBW.Get () * static_cast<double> (m_minRtt.GetSeconds ()));
+  m_sState->m_cWnd = m_sState->m_segmentSize;
 
   // Restart from highest ACK
   m_nextTxSequence = m_txBuffer->HeadSequence ();
-  NS_LOG_INFO ("RTO. Reset cwnd to " << m_cWnd <<
-      ", ssthresh to " << m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
+  NS_LOG_INFO ("RTO. Reset cwnd to " << m_sState->m_cWnd <<
+      ", ssthresh to " << m_sState->m_ssThresh << ", restart from seqnum " << m_nextTxSequence);
 
   // Retransmit the packet
   DoRetransmit ();

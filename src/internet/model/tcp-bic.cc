@@ -61,10 +61,6 @@ TcpBic::GetTypeId (void)
                    UintegerValue (4),
                    MakeUintegerAccessor (&TcpBic::m_b),
                    MakeUintegerChecker <uint8_t> (2))
-    .AddAttribute ("ReTxThreshold", "Threshold for fast retransmit",
-                   UintegerValue (3),
-                   MakeUintegerAccessor (&TcpBic::m_retxThresh),
-                   MakeUintegerChecker<uint32_t> ())
     .AddTraceSource ("BicState",
                      "State of TCP BIC",
                      MakeTraceSourceAccessor (&TcpBic::m_bicState),
@@ -136,10 +132,10 @@ TcpBic::CongAvoid (void)
 {
   NS_LOG_FUNCTION (this);
 
-  if (m_cWnd < m_ssThresh)
+  if (m_sState->m_cWnd < m_sState->m_ssThresh)
     {
       NS_LOG_DEBUG ("SlowStart: Increase cwnd by one segment size");
-      m_cWnd += m_segmentSize;
+      m_sState->m_cWnd += m_sState->m_segmentSize;
     }
   else
     {
@@ -153,9 +149,9 @@ TcpBic::CongAvoid (void)
        */
       if (m_cWndCnt > cnt)
         {
-          m_cWnd += m_segmentSize;
+          m_sState->m_cWnd += m_sState->m_segmentSize;
           m_cWndCnt = 0;
-          NS_LOG_DEBUG ("Increment cwnd to " << m_cWnd / m_segmentSize);
+          NS_LOG_DEBUG ("Increment cwnd to " << m_sState->m_cWnd / m_sState->m_segmentSize);
         }
       else
         {
@@ -169,7 +165,7 @@ TcpBic::Update ()
 {
   NS_LOG_FUNCTION (this);
 
-  uint32_t segCwnd = m_cWnd / m_segmentSize;
+  uint32_t segCwnd = m_sState->m_cWnd / m_sState->m_segmentSize;
   uint32_t cnt;
 
   m_lastCwnd = segCwnd;
@@ -273,7 +269,7 @@ TcpBic::RecalcSsthresh ()
       return;
     }
 
-  uint32_t segCwnd = m_cWnd / m_segmentSize;
+  uint32_t segCwnd = m_sState->m_cWnd / m_sState->m_segmentSize;
 
   NS_LOG_DEBUG ("Loss at cWnd=" << segCwnd);
 
@@ -295,16 +291,16 @@ TcpBic::RecalcSsthresh ()
 
   if (segCwnd < m_lowWnd)
     {
-      m_ssThresh = std::max ((uint32_t) (m_segmentSize * (segCwnd >> 2)), 2U * m_segmentSize);
-      NS_LOG_DEBUG ("Less than lowWindow, ssTh and cWnd= " << m_ssThresh / m_segmentSize);
+      m_sState->m_ssThresh = std::max ((uint32_t) (m_sState->m_segmentSize * (segCwnd >> 2)), 2U * m_sState->m_segmentSize);
+      NS_LOG_DEBUG ("Less than lowWindow, ssTh and cWnd= " << m_sState->m_ssThresh / m_sState->m_segmentSize);
     }
   else
     {
-      m_ssThresh = std::max ((uint32_t) (m_segmentSize * (segCwnd * m_beta)), 2U * m_segmentSize);
-      NS_LOG_DEBUG ("More than lowWindow, ssTh and cWnd= " << m_ssThresh / m_segmentSize);
+      m_sState->m_ssThresh = std::max ((uint32_t) (m_sState->m_segmentSize * (segCwnd * m_beta)), 2U * m_sState->m_segmentSize);
+      NS_LOG_DEBUG ("More than lowWindow, ssTh and cWnd= " << m_sState->m_ssThresh / m_sState->m_segmentSize);
     }
 
-  m_cWnd = m_ssThresh;
+  m_sState->m_cWnd = m_sState->m_ssThresh;
 }
 
 void
@@ -314,13 +310,13 @@ TcpBic::DupAck (const TcpHeader& t, uint32_t count)
   (void) t;
 
   /* After 3 DUPAcks, there is a Loss. */
-  if (count == m_retxThresh)
+  if (count == m_sState->m_retxThresh)
     {
       RecalcSsthresh ();
       m_bicState = LOSS;
       DoRetransmit ();
     }
-  else if (count > m_retxThresh)
+  else if (count > m_sState->m_retxThresh)
     {
       CongAvoid ();
       SendPendingData (m_connected);

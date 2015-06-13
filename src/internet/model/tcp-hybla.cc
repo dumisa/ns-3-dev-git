@@ -63,8 +63,8 @@ TcpHybla::InitializeCwnd ()
   /* set minimum rtt as this is the 1st ever seen */
   m_minRtt = m_rtt->GetEstimate ();
 
-  m_initialCWnd *= m_rho;
-  m_initialSsThresh *= (m_rho * m_segmentSize);
+  m_sState->m_initialCWnd *= m_rho;
+  m_sState->m_initialSsThresh *= (m_rho * m_sState->m_segmentSize);
 
   TcpNewReno::InitializeCwnd ();
 }
@@ -85,10 +85,10 @@ TcpHybla::RecalcParam ()
     }
 
   /* Bring back the ssThresh to the original value, without m_rho multiplied */
-  m_ssThresh /= (oldRho * m_segmentSize);
+  m_sState->m_ssThresh /= (oldRho * m_sState->m_segmentSize);
 
   /* Now update ssThresh */
-  m_ssThresh *= (m_rho * m_segmentSize);
+  m_sState->m_ssThresh *= (m_rho * m_sState->m_segmentSize);
 
   NS_LOG_DEBUG ("Calculated rho=" << m_rho);
 }
@@ -110,11 +110,11 @@ TcpHybla::NewAck (const SequenceNumber32 &seq)
       m_minRtt = rtt;
     }
 
-  uint32_t segCwnd = m_cWnd / m_segmentSize;
+  uint32_t segCwnd = m_sState->m_cWnd / m_sState->m_segmentSize;
 
   NS_LOG_DEBUG ("NewAck, cwnd is " << segCwnd);
 
-  if (m_cWnd.Get () < m_ssThresh.Get ())
+  if (m_sState->m_cWnd.Get () < m_sState->m_ssThresh.Get ())
     {
       /*
        * slow start
@@ -131,21 +131,21 @@ TcpHybla::NewAck (const SequenceNumber32 &seq)
        * congestion avoidance
        * INC = RHO^2 / W
        */
-      NS_ASSERT (m_cWnd.Get () != 0);
+      NS_ASSERT (m_sState->m_cWnd.Get () != 0);
       increment = std::pow (m_rho, 2) / ((double) segCwnd);
       NS_LOG_DEBUG ("Cong avoid: inc=" << increment);
     }
 
   NS_ASSERT (increment >= 0.0);
 
-  uint32_t byte = increment * m_segmentSize;
+  uint32_t byte = increment * m_sState->m_segmentSize;
 
   /* clamp down slowstart cwnd to ssthresh value. */
   if (isSlowstart)
     {
-      m_cWnd = std::min (m_cWnd.Get () + byte, m_ssThresh.Get ());
-      NS_LOG_DEBUG ("Slow start: new cwnd=" << m_cWnd / m_segmentSize << "ssth= " <<
-                    m_ssThresh / m_segmentSize);
+      m_sState->m_cWnd = std::min (m_sState->m_cWnd.Get () + byte, m_sState->m_ssThresh.Get ());
+      NS_LOG_DEBUG ("Slow start: new cwnd=" << m_sState->m_cWnd / m_sState->m_segmentSize << "ssth= " <<
+                    m_sState->m_ssThresh / m_sState->m_segmentSize);
     }
   else
     {
@@ -153,12 +153,12 @@ TcpHybla::NewAck (const SequenceNumber32 &seq)
 
       while (m_cWndCnt > 1)
         {
-          m_cWnd += m_segmentSize;
+          m_sState->m_cWnd += m_sState->m_segmentSize;
           m_cWndCnt -= 1;
         }
 
-      NS_LOG_DEBUG ("Cong avoid: new cwnd=" << m_cWnd / m_segmentSize <<
-                    "ssth= " << m_ssThresh / m_segmentSize);
+      NS_LOG_DEBUG ("Cong avoid: new cwnd=" << m_sState->m_cWnd / m_sState->m_segmentSize <<
+                    "ssth= " << m_sState->m_ssThresh / m_sState->m_segmentSize);
     }
 
   TcpSocketBase::NewAck (seq);
@@ -169,26 +169,26 @@ void
 TcpHybla::DupAck (const TcpHeader& t, uint32_t count)
 {
   NS_LOG_FUNCTION (this << count);
-  if (count == m_retxThresh && !m_inFastRec)
+  if (count == m_sState->m_retxThresh && !m_sState->m_inFastRec)
     { // triple duplicate ack triggers fast retransmit (RFC2582 sec.3 bullet #1)
-      m_ssThresh = std::max (2 * m_segmentSize, BytesInFlight () / 2);
-      m_cWnd = m_ssThresh + 3 * m_segmentSize;
+      m_sState->m_ssThresh = std::max (2 * m_sState->m_segmentSize, BytesInFlight () / 2);
+      m_sState->m_cWnd = m_sState->m_ssThresh + 3 * m_sState->m_segmentSize;
       m_recover = m_highTxMark;
-      m_inFastRec = true;
-      NS_LOG_INFO ("Triple dupack. Enter fast recovery mode. Reset cwnd to " << m_cWnd <<
-                   ", ssthresh to " << m_ssThresh << " at fast recovery seqnum " << m_recover);
+      m_sState->m_inFastRec = true;
+      NS_LOG_INFO ("Triple dupack. Enter fast recovery mode. Reset cwnd to " << m_sState->m_cWnd <<
+                   ", ssthresh to " << m_sState->m_ssThresh << " at fast recovery seqnum " << m_recover);
       DoRetransmit ();
     }
-  else if (m_inFastRec)
+  else if (m_sState->m_inFastRec)
     { // Increase cwnd for every additional dupack (RFC2582, sec.3 bullet #3)
-      //m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("Dupack in fast recovery mode. Increase cwnd to " << m_cWnd);
+      //m_sState->m_cWnd += m_sState->m_segmentSize;
+      NS_LOG_INFO ("Dupack in fast recovery mode. Increase cwnd to " << m_sState->m_cWnd);
       SendPendingData (m_connected);
     }
-  else if (!m_inFastRec && m_limitedTx && m_txBuffer->SizeFromSequence (m_nextTxSequence) > 0)
+  else if (!m_sState->m_inFastRec && m_limitedTx && m_txBuffer->SizeFromSequence (m_nextTxSequence) > 0)
     { // RFC3042 Limited transmit: Send a new packet for each duplicated ACK before fast retransmit
       NS_LOG_INFO ("Limited transmit");
-      uint32_t sz = SendDataPacket (m_nextTxSequence, m_segmentSize, true);
+      uint32_t sz = SendDataPacket (m_nextTxSequence, m_sState->m_segmentSize, true);
       m_nextTxSequence += sz;                    // Advance next tx sequence
     }
 }

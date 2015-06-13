@@ -73,20 +73,20 @@ TcpTahoe::NewAck (SequenceNumber32 const& seq)
 {
   NS_LOG_FUNCTION (this << seq);
   NS_LOG_LOGIC ("TcpTahoe received ACK for seq " << seq <<
-                " cwnd " << m_cWnd <<
-                " ssthresh " << m_ssThresh);
-  if (m_cWnd < m_ssThresh)
-    { // Slow start mode, add one segSize to cWnd. Default m_ssThresh is 65535. (RFC2001, sec.1)
-      m_cWnd += m_segmentSize;
-      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+                " cwnd " << m_sState->m_cWnd <<
+                " ssthresh " << m_sState->m_ssThresh);
+  if (m_sState->m_cWnd < m_sState->m_ssThresh)
+    { // Slow start mode, add one segSize to cWnd. Default m_sState->m_ssThresh is 65535. (RFC2001, sec.1)
+      m_sState->m_cWnd += m_sState->m_segmentSize;
+      NS_LOG_INFO ("In SlowStart, updated to cwnd " << m_sState->m_cWnd << " ssthresh " << m_sState->m_ssThresh);
     }
   else
     { // Congestion avoidance mode, increase by (segSize*segSize)/cwnd. (RFC2581, sec.3.1)
       // To increase cwnd for one segSize per RTT, it should be (ackBytes*segSize)/cwnd
-      double adder = static_cast<double> (m_segmentSize * m_segmentSize) / m_cWnd.Get ();
+      double adder = static_cast<double> (m_sState->m_segmentSize * m_sState->m_segmentSize) / m_sState->m_cWnd.Get ();
       adder = std::max (1.0, adder);
-      m_cWnd += static_cast<uint32_t> (adder);
-      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_cWnd << " ssthresh " << m_ssThresh);
+      m_sState->m_cWnd += static_cast<uint32_t> (adder);
+      NS_LOG_INFO ("In CongAvoid, updated to cwnd " << m_sState->m_cWnd << " ssthresh " << m_sState->m_ssThresh);
     }
   TcpSocketBase::NewAck (seq);           // Complete newAck processing
 }
@@ -96,16 +96,16 @@ void
 TcpTahoe::DupAck (const TcpHeader& t, uint32_t count)
 {
   NS_LOG_FUNCTION (this << "t " << count);
-  if (count == m_retxThresh)
+  if (count == m_sState->m_retxThresh)
     { // triple duplicate ack triggers fast retransmit (RFC2001, sec.3)
-      NS_LOG_INFO ("Triple Dup Ack: old ssthresh " << m_ssThresh << " cwnd " << m_cWnd);
+      NS_LOG_INFO ("Triple Dup Ack: old ssthresh " << m_sState->m_ssThresh << " cwnd " << m_sState->m_cWnd);
       // fast retransmit in Tahoe means triggering RTO earlier. Tx is restarted
       // from the highest ack and run slow start again.
       // (Fall & Floyd 1996, sec.1)
-      m_ssThresh = std::max (static_cast<unsigned> (m_cWnd / 2), m_segmentSize * 2);  // Half ssthresh
-      m_cWnd = m_segmentSize; // Run slow start again
+      m_sState->m_ssThresh = std::max (static_cast<unsigned> (m_sState->m_cWnd / 2), m_sState->m_segmentSize * 2);  // Half ssthresh
+      m_sState->m_cWnd = m_sState->m_segmentSize; // Run slow start again
       m_nextTxSequence = m_txBuffer->HeadSequence (); // Restart from highest Ack
-      NS_LOG_INFO ("Triple Dup Ack: new ssthresh " << m_ssThresh << " cwnd " << m_cWnd);
+      NS_LOG_INFO ("Triple Dup Ack: new ssthresh " << m_sState->m_ssThresh << " cwnd " << m_sState->m_cWnd);
       NS_LOG_LOGIC ("Triple Dup Ack: retransmit missing segment at " << Simulator::Now ().GetSeconds ());
       DoRetransmit ();
     }
@@ -121,8 +121,8 @@ void TcpTahoe::Retransmit (void)
   // If all data are received (non-closing socket and nothing to send), just return
   if (m_state <= ESTABLISHED && m_txBuffer->HeadSequence () >= m_highTxMark) return;
 
-  m_ssThresh = std::max (static_cast<unsigned> (m_cWnd / 2), m_segmentSize * 2);  // Half ssthresh
-  m_cWnd = m_segmentSize;                   // Set cwnd to 1 segSize (RFC2001, sec.2)
+  m_sState->m_ssThresh = std::max (static_cast<unsigned> (m_sState->m_cWnd / 2), m_sState->m_segmentSize * 2);  // Half ssthresh
+  m_sState->m_cWnd = m_sState->m_segmentSize;                   // Set cwnd to 1 segSize (RFC2001, sec.2)
   m_nextTxSequence = m_txBuffer->HeadSequence (); // Restart from highest Ack
   DoRetransmit ();                          // Retransmit the packet
 }

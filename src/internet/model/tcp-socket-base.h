@@ -45,6 +45,7 @@ class Node;
 class Packet;
 class TcpL4Protocol;
 class TcpHeader;
+class TcpSocketState;
 
 /**
  * \ingroup tcp
@@ -166,6 +167,9 @@ public:
    */
   Ptr<TcpRxBuffer> GetRxBuffer (void) const;
 
+
+  TracedValue<uint32_t> GetCwnd () const;
+  TracedValue<uint32_t> GetSsThresh () const;
 
   // Necessary implementations of null functions from ns3::Socket
   virtual enum SocketErrno GetErrno (void) const;    // returns m_errno
@@ -759,12 +763,6 @@ protected:
   TracedValue<SequenceNumber32> m_highRxMark;     //!< Highest seqno received
   TracedValue<SequenceNumber32> m_highRxAckMark;  //!< Highest ack received
 
-  // Congestion control
-  TracedValue<uint32_t> m_cWnd;     //!< Congestion window
-  TracedValue<uint32_t> m_ssThresh; //!< Slow start threshold
-  uint32_t               m_initialCWnd;      //!< Initial cWnd value
-  uint32_t               m_initialSsThresh;  //!< Initial Slow Start Threshold value
-
   // Options
   bool    m_winScalingEnabled;    //!< Window Scale option enabled
   uint8_t m_sndScaleFactor;       //!< Sent Window Scale (i.e., the one of the node)
@@ -775,9 +773,34 @@ protected:
 
   EventId m_sendPendingDataEvent; //!< micro-delay event to send pending data
 
+  Ptr<TcpSocketState>    m_sState;
+};
+
+class TcpSocketState : public Object
+{
+public:
+  /**
+   * Get the type ID.
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+
+  TcpSocketState ();
+  TcpSocketState (const TcpSocketState &other);
+
+  // Congestion control
+  TracedValue<uint32_t>  m_cWnd;             //!< Congestion window
+  TracedValue<uint32_t>  m_ssThresh;         //!< Slow start threshold
+  uint32_t               m_initialCWnd;      //!< Initial cWnd value
+  uint32_t               m_initialSsThresh;  //!< Initial Slow Start Threshold value
+
   // Fast Recovery / Fast Retransmit
   uint32_t               m_retxThresh;   //!< Fast Retransmit threshold
   bool                   m_inFastRec;    //!< currently in fast recovery
+
+  // Segment
+  uint32_t              m_segmentSize; //!< Segment size
 };
 
 } // namespace ns3

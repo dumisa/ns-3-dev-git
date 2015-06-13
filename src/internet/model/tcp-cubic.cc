@@ -187,7 +187,7 @@ TcpCubic::WindowUpdate ()
   Time t;
   uint32_t delta, bicTarget, cnt = 0;
   uint64_t offs;
-  uint32_t segCwnd = m_cWnd / m_segmentSize;
+  uint32_t segCwnd = m_sState->m_cWnd / m_sState->m_segmentSize;
   NS_LOG_DEBUG ("New ack. cWnd=" << segCwnd);
 
   if (m_epochStart == Time::Min ())
@@ -196,7 +196,7 @@ TcpCubic::WindowUpdate ()
 
       if (m_lastMaxCwnd <= segCwnd)
         {
-          NS_LOG_DEBUG ("Last Max cWnd < m_cWnd. K=0 and origin=" << m_cWnd);
+          NS_LOG_DEBUG ("Last Max cWnd < m_sState->m_cWnd. K=0 and origin=" << m_sState->m_cWnd);
           m_bicK = 0;
           m_bicOriginPoint = segCwnd;
         }
@@ -272,14 +272,14 @@ void
 TcpCubic::CongAvoid (const SequenceNumber32& seq)
 {
   NS_LOG_FUNCTION (this);
-  if (m_cWnd.Get () < m_ssThresh)
+  if (m_sState->m_cWnd.Get () < m_sState->m_ssThresh)
     {
       if (m_hystart && seq > m_endSeq)
         {
           HystartReset ();
         }
 
-      m_cWnd += m_segmentSize;
+      m_sState->m_cWnd += m_sState->m_segmentSize;
       NS_LOG_DEBUG ("In SS, increment cWnd by one segment size");
     }
   else
@@ -293,9 +293,9 @@ TcpCubic::CongAvoid (const SequenceNumber32& seq)
       // cannot be updated.
       if (m_cWndCnt > cnt)
         {
-          m_cWnd += m_segmentSize;
+          m_sState->m_cWnd += m_sState->m_segmentSize;
           m_cWndCnt = 0;
-          NS_LOG_DEBUG ("Increment cwnd to " << m_cWnd);
+          NS_LOG_DEBUG ("Increment cwnd to " << m_sState->m_cWnd);
         }
       else
         {
@@ -332,8 +332,8 @@ TcpCubic::PktsAcked ()
 
   /* hystart triggers when cwnd is larger than some threshold */
   if (m_hystart
-      && m_cWnd.Get () <= m_ssThresh
-      && m_cWnd.Get () >= m_hystartLowWindow * m_segmentSize)
+      && m_sState->m_cWnd.Get () <= m_sState->m_ssThresh
+      && m_sState->m_cWnd.Get () >= m_hystartLowWindow * m_sState->m_segmentSize)
     {
       HystartUpdate (delay);
     }
@@ -384,7 +384,7 @@ TcpCubic::HystartUpdate (const Time& delay)
       if (m_found & m_hystartDetect)
         {
           NS_LOG_DEBUG ("Exit from SS, immediately :-)");
-          m_ssThresh = m_cWnd.Get ();
+          m_sState->m_ssThresh = m_sState->m_cWnd.Get ();
         }
     }
 }
@@ -412,7 +412,7 @@ TcpCubic::RecalcSsthresh ()
 {
   NS_LOG_FUNCTION (this);
 
-  uint32_t segCwnd = m_cWnd / m_segmentSize;
+  uint32_t segCwnd = m_sState->m_cWnd / m_sState->m_segmentSize;
   NS_LOG_DEBUG ("Loss at cWnd=" << segCwnd);
 
   if (m_cubicState == LOSS)
@@ -436,11 +436,11 @@ TcpCubic::RecalcSsthresh ()
     }
 
   /* Formula taken from the Linux kernel */
-  m_ssThresh = std::max (static_cast<uint32_t> (segCwnd * m_beta * m_segmentSize),
-                         2U * m_segmentSize);
-  m_cWnd = m_ssThresh;
+  m_sState->m_ssThresh = std::max (static_cast<uint32_t> (segCwnd * m_beta * m_sState->m_segmentSize),
+                         2U * m_sState->m_segmentSize);
+  m_sState->m_cWnd = m_sState->m_ssThresh;
 
-  NS_LOG_DEBUG ("Imposing cwnd and ssth=" << m_cWnd / m_segmentSize);
+  NS_LOG_DEBUG ("Imposing cwnd and ssth=" << m_sState->m_cWnd / m_sState->m_segmentSize);
 }
 
 void

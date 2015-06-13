@@ -152,14 +152,41 @@ TcpSocketBase::GetTypeId (void)
                      "ns3::SequenceNumber32TracedValueCallback")
     .AddTraceSource ("CongestionWindow",
                      "The TCP connection's congestion window",
-                     MakeTraceSourceAccessor (&TcpSocketBase::m_cWnd),
+                     MakeTraceSourceAccessorFn (&TcpSocketBase::GetCwnd),
                      "ns3::TracedValue::Uint32Callback")
     .AddTraceSource ("SlowStartThreshold",
                      "TCP slow start threshold (bytes)",
-                     MakeTraceSourceAccessor (&TcpSocketBase::m_ssThresh),
+                     MakeTraceSourceAccessorFn (&TcpSocketBase::GetSsThresh),
                      "ns3::TracedValue::Uint32Callback")
   ;
   return tid;
+}
+
+TypeId
+TcpSocketState::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::TcpSocketState")
+    .SetParent<Object> ()
+    .SetGroupName ("Internet")
+    .AddConstructor <TcpSocketState> ()
+  ;
+  return tid;
+}
+
+TcpSocketState::TcpSocketState (void)
+  : Object ()
+{
+
+}
+
+TcpSocketState::TcpSocketState (const TcpSocketState &other)
+  : m_cWnd (other.m_cWnd),
+    m_ssThresh (other.m_ssThresh),
+    m_initialCWnd (other.m_initialCWnd),
+    m_initialSsThresh (other.m_initialSsThresh),
+    m_segmentSize (other.m_segmentSize)
+{
+
 }
 
 TcpSocketBase::TcpSocketBase (void)
@@ -182,7 +209,6 @@ TcpSocketBase::TcpSocketBase (void)
     m_shutdownSend (false),
     m_shutdownRecv (false),
     m_connected (false),
-    m_segmentSize (0),
     // For attribute initialization consistency (quiet valgrind)
     m_rWnd (0),
     m_highRxMark (0),
@@ -196,6 +222,7 @@ TcpSocketBase::TcpSocketBase (void)
   NS_LOG_FUNCTION (this);
   m_rxBuffer = CreateObject<TcpRxBuffer> ();
   m_txBuffer = CreateObject<TcpTxBuffer> ();
+  m_sState   = CreateObject<TcpSocketState> ();
 }
 
 TcpSocketBase::TcpSocketBase (const TcpSocketBase& sock)
@@ -224,21 +251,16 @@ TcpSocketBase::TcpSocketBase (const TcpSocketBase& sock)
     m_shutdownRecv (sock.m_shutdownRecv),
     m_connected (sock.m_connected),
     m_msl (sock.m_msl),
-    m_segmentSize (sock.m_segmentSize),
     m_maxWinSize (sock.m_maxWinSize),
     m_rWnd (sock.m_rWnd),
     m_highRxMark (sock.m_highRxMark),
     m_highRxAckMark (sock.m_highRxAckMark),
-    m_cWnd (sock.m_cWnd),
-    m_ssThresh (sock.m_ssThresh),
-    m_initialCWnd (sock.m_initialCWnd),
-    m_initialSsThresh (sock.m_initialSsThresh),
     m_winScalingEnabled (sock.m_winScalingEnabled),
     m_sndScaleFactor (sock.m_sndScaleFactor),
     m_rcvScaleFactor (sock.m_rcvScaleFactor),
     m_timestampEnabled (sock.m_timestampEnabled),
-    m_timestampToEcho (sock.m_timestampToEcho)
-
+    m_timestampToEcho (sock.m_timestampToEcho),
+    m_sState (sock.m_sState)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -439,8 +461,8 @@ TcpSocketBase::Bind (const Address &address)
 void
 TcpSocketBase::InitializeCwnd (void)
 {
-  m_cWnd = m_initialCWnd * m_segmentSize;
-  m_ssThresh = m_initialSsThresh;
+  m_sState->m_cWnd = m_sState->m_initialCWnd * m_sState->m_segmentSize;
+  m_sState->m_ssThresh = m_sState->m_initialSsThresh;
 }
 
 void
@@ -449,13 +471,13 @@ TcpSocketBase::SetInitialSSThresh (uint32_t threshold)
   NS_ABORT_MSG_UNLESS (m_state == CLOSED,
     "TcpSocketBase::SetSSThresh() cannot change initial ssThresh after connection started.");
 
-  m_initialSsThresh = threshold;
+  m_sState->m_initialSsThresh = threshold;
 }
 
 uint32_t
 TcpSocketBase::GetInitialSSThresh (void) const
 {
-  return m_initialSsThresh;
+  return m_sState->m_initialSsThresh;
 }
 
 void
@@ -464,19 +486,19 @@ TcpSocketBase::SetInitialCwnd (uint32_t cwnd)
   NS_ABORT_MSG_UNLESS (m_state == CLOSED,
     "TcpSocketBase::SetInitialCwnd() cannot change initial cwnd after connection started.");
 
-  m_initialCWnd = cwnd;
+  m_sState->m_initialCWnd = cwnd;
 }
 
 uint32_t
 TcpSocketBase::GetInitialCwnd (void) const
 {
-  return m_initialCWnd;
+  return m_sState->m_initialCWnd;
 }
 
 void
 TcpSocketBase::ScaleSsThresh (uint8_t scaleFactor)
 {
-  m_ssThresh <<= scaleFactor;
+  m_sState->m_ssThresh <<= scaleFactor;
 }
 
 /* Inherit from Socket class: Initiate connection to a remote address:port */
@@ -2032,7 +2054,7 @@ TcpSocketBase::SendPendingData (bool withAck)
     {
       uint32_t w = AvailableWindow (); // Get available window size
       // Stop sending if we need to wait for a larger Tx window (prevent silly window syndrome)
-      if (w < m_segmentSize && m_txBuffer->SizeFromSequence (m_nextTxSequence) > w)
+      if (w < m_sState->m_segmentSize && m_txBuffer->SizeFromSequence (m_nextTxSequence) > w)
         {
           NS_LOG_LOGIC ("Preventing Silly Window Syndrome. Wait to send.");
           break; // No more
@@ -2040,7 +2062,7 @@ TcpSocketBase::SendPendingData (bool withAck)
       // Nagle's algorithm (RFC896): Hold off sending if there is unacked data
       // in the buffer and the amount of data to send is less than one segment
       if (!m_noDelay && UnAckDataCount () > 0
-          && m_txBuffer->SizeFromSequence (m_nextTxSequence) < m_segmentSize)
+          && m_txBuffer->SizeFromSequence (m_nextTxSequence) < m_sState->m_segmentSize)
         {
           NS_LOG_LOGIC ("Invoking Nagle's algorithm. Wait to send.");
           break;
@@ -2048,12 +2070,12 @@ TcpSocketBase::SendPendingData (bool withAck)
       NS_LOG_LOGIC ("TcpSocketBase " << this << " SendPendingData" <<
                     " w " << w <<
                     " rxwin " << m_rWnd <<
-                    " segsize " << m_segmentSize <<
+                    " segsize " << m_sState->m_segmentSize <<
                     " nextTxSeq " << m_nextTxSequence <<
                     " highestRxAck " << m_txBuffer->HeadSequence () <<
                     " pd->Size " << m_txBuffer->Size () <<
                     " pd->SFS " << m_txBuffer->SizeFromSequence (m_nextTxSequence));
-      uint32_t s = std::min (w, m_segmentSize);  // Send no more than window
+      uint32_t s = std::min (w, m_sState->m_segmentSize);  // Send no more than window
       uint32_t sz = SendDataPacket (m_nextTxSequence, s, withAck);
       nPacketsSent++;                             // Count sent this loop
       m_nextTxSequence += sz;                     // Advance next tx sequence
@@ -2080,7 +2102,7 @@ uint32_t
 TcpSocketBase::Window (void)
 {
   NS_LOG_FUNCTION (this);
-  return std::min (m_rWnd.Get (), m_cWnd.Get ());
+  return std::min (m_rWnd.Get (), m_sState->m_cWnd.Get ());
 }
 
 uint32_t
@@ -2397,7 +2419,7 @@ TcpSocketBase::DoRetransmit ()
     }
   // Retransmit a data packet: Call SendDataPacket
   NS_LOG_LOGIC ("TcpSocketBase " << this << " retxing seq " << m_txBuffer->HeadSequence ());
-  uint32_t sz = SendDataPacket (m_txBuffer->HeadSequence (), m_segmentSize, true);
+  uint32_t sz = SendDataPacket (m_txBuffer->HeadSequence (), m_sState->m_segmentSize, true);
   // In case of RTO, advance m_nextTxSequence
   m_nextTxSequence = std::max (m_nextTxSequence.Get (), m_txBuffer->HeadSequence () + sz);
 
@@ -2456,14 +2478,14 @@ TcpSocketBase::GetRcvBufSize (void) const
 void
 TcpSocketBase::SetSegSize (uint32_t size)
 {
-  m_segmentSize = size;
+  m_sState->m_segmentSize = size;
   NS_ABORT_MSG_UNLESS (m_state == CLOSED, "Cannot change segment size dynamically.");
 }
 
 uint32_t
 TcpSocketBase::GetSegSize (void) const
 {
-  return m_segmentSize;
+  return m_sState->m_segmentSize;
 }
 
 void
@@ -2771,6 +2793,17 @@ TcpSocketBase::GetRxBuffer (void) const
   return m_rxBuffer;
 }
 
+TracedValue<uint32_t>
+TcpSocketBase::GetCwnd () const
+{
+  return m_sState->m_cWnd;
+}
+
+TracedValue<uint32_t>
+TcpSocketBase::GetSsThresh () const
+{
+  return m_sState->m_ssThresh;
+}
 
 //RttHistory methods
 RttHistory::RttHistory (SequenceNumber32 s, uint32_t c, Time t)

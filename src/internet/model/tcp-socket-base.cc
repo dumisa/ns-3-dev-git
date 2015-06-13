@@ -50,6 +50,7 @@
 #include "tcp-option-winscale.h"
 #include "tcp-option-ts.h"
 #include "rtt-estimator.h"
+#include "tcp-congestion-ops.h"
 
 #include <math.h>
 #include <algorithm>
@@ -216,7 +217,8 @@ TcpSocketBase::TcpSocketBase (void)
     m_sndScaleFactor (0),
     m_rcvScaleFactor (0),
     m_timestampEnabled (true),
-    m_timestampToEcho (0)
+    m_timestampToEcho (0),
+    m_congestionControl (0)
 
 {
   NS_LOG_FUNCTION (this);
@@ -260,7 +262,8 @@ TcpSocketBase::TcpSocketBase (const TcpSocketBase& sock)
     m_rcvScaleFactor (sock.m_rcvScaleFactor),
     m_timestampEnabled (sock.m_timestampEnabled),
     m_timestampToEcho (sock.m_timestampToEcho),
-    m_sState (sock.m_sState)
+    m_sState (sock.m_sState),
+    m_congestionControl (sock.m_congestionControl)
 {
   NS_LOG_FUNCTION (this);
   NS_LOG_LOGIC ("Invoked the copy constructor");
@@ -2803,6 +2806,12 @@ TracedValue<uint32_t>
 TcpSocketBase::GetSsThresh () const
 {
   return m_sState->m_ssThresh;
+}
+
+void
+TcpSocketBase::SetCongestionControlAlgorithm (Ptr<TcpCongestionOps> algo)
+{
+  m_congestionControl = algo;
 }
 
 //RttHistory methods

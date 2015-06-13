@@ -46,6 +46,7 @@ class Packet;
 class TcpL4Protocol;
 class TcpHeader;
 class TcpSocketState;
+class TcpCongestionOps;
 
 /**
  * \ingroup tcp
@@ -170,6 +171,9 @@ public:
 
   TracedValue<uint32_t> GetCwnd () const;
   TracedValue<uint32_t> GetSsThresh () const;
+
+
+  void SetCongestionControlAlgorithm (Ptr<TcpCongestionOps> algo);
 
   // Necessary implementations of null functions from ns3::Socket
   virtual enum SocketErrno GetErrno (void) const;    // returns m_errno
@@ -774,6 +778,7 @@ protected:
   EventId m_sendPendingDataEvent; //!< micro-delay event to send pending data
 
   Ptr<TcpSocketState>    m_sState;
+  Ptr<TcpCongestionOps>  m_congestionControl;
 };
 
 class TcpSocketState : public Object

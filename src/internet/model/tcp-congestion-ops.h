@@ -40,26 +40,32 @@ public:
   /**
    * \brief Default constructor
    */
-  TcpCongestionOps();
+  TcpCongestionOps ();
+
+  TcpCongestionOps (const TcpCongestionOps &other);
 
   /**
    * \brief Default deconstructor
    */
   virtual ~TcpCongestionOps ();
 
+  virtual std::string GetName () const = 0;
+
   /**
    * \brief Get the slow start threshold after a loss event
    * \param Socket internal state
    * \return Slow start threshold
    */
-  virtual uint32_t GetSSThresh (Ptr<TcpSocketState> state)     = 0;
+  virtual uint32_t GetSSThresh (Ptr<const TcpSocketState> state)     = 0;
 
   /**
    * \brief Congestion avoidance algorithm implementation
    *
+   * Mimic CongAvoid in Linux
+   *
    * \param Socket internal state
    */
-  virtual void CongestionAvoid (Ptr<TcpSocketState> state) = 0;
+  virtual void NewAck (Ptr<TcpSocketState> state) = 0;
 
   // Linux:
   /* call before changing ca_state (optional) */
@@ -72,9 +78,48 @@ public:
   // u32  (*undo_cwnd)(struct sock *sk);
   /* hook for packet ack accounting (optional) */
   // void (*pkts_acked)(struct sock *sk, u32 num_acked, s32 rtt_us);
-
-  virtual std::string GetName () = 0;
 };
+
+class TcpReno : public TcpCongestionOps
+{
+public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+
+  TcpReno ();
+  TcpReno (const TcpReno& sock);
+
+  ~TcpReno ();
+
+  std::string GetName () const;
+
+  void NewAck (Ptr<TcpSocketState> state);
+  uint32_t GetSSThresh(Ptr<const TcpSocketState> state);
+};
+
+class TcpNewReno : public TcpCongestionOps
+{
+public:
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId (void);
+
+  TcpNewReno ();
+  TcpNewReno (const TcpNewReno& sock);
+
+  ~TcpNewReno ();
+
+  std::string GetName () const;
+
+  void NewAck (Ptr<TcpSocketState> state);
+  uint32_t GetSSThresh(Ptr<const TcpSocketState> state);
+};
+
 
 } // namespace ns3
 

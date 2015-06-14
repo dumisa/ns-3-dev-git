@@ -557,7 +557,7 @@ protected:
    * \brief Call CopyObject<> to clone me
    * \returns a copy of the socket
    */
-  virtual Ptr<TcpSocketBase> Fork (void) = 0;
+  virtual Ptr<TcpSocketBase> Fork (void);
 
   /**
    * \brief Received an ACK packet
@@ -590,7 +590,7 @@ protected:
    * \param tcpHeader the packet's TCP header
    * \param count counter of duplicate ACKs
    */
-  virtual void DupAck (const TcpHeader& tcpHeader, uint32_t count) = 0;
+  virtual void DupAck (const TcpHeader& tcpHeader, uint32_t count);
 
   /**
    * \brief Call Retransmit() upon RTO event
@@ -749,6 +749,7 @@ protected:
   TracedValue<SequenceNumber32> m_highTxMark;     //!< Highest seqno ever sent, regardless of ReTx
   Ptr<TcpRxBuffer>              m_rxBuffer;       //!< Rx buffer (reordering buffer)
   Ptr<TcpTxBuffer>              m_txBuffer;       //!< Tx buffer
+  uint32_t                      m_bytesAckedNotProcessed;  //!< Bytes acked, but not processed
 
   // State-related attributes
   TracedValue<TcpStates_t> m_state;         //!< TCP state

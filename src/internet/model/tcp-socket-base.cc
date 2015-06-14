@@ -67,6 +67,7 @@ TcpSocketBase::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::TcpSocketBase")
     .SetParent<TcpSocket> ()
     .SetGroupName ("Internet")
+    .AddConstructor <TcpSocketBase> ()
 //    .AddAttribute ("TcpState", "State in TCP state machine",
 //                   TypeId::ATTR_GET,
 //                   EnumValue (CLOSED),
@@ -1176,13 +1177,23 @@ TcpSocketBase::ReceivedAck (Ptr<Packet> packet, const TcpHeader& tcpHeader)
 {
   NS_LOG_FUNCTION (this << tcpHeader);
 
+  NS_ASSERT (0 != (tcpHeader.GetFlags () & TcpHeader::ACK));
+
   // Received ACK. Compare the ACK number against highest unacked seqno
-  if (0 == (tcpHeader.GetFlags () & TcpHeader::ACK))
-    { // Ignore if no ACK flag
-    }
-  else if (tcpHeader.GetAckNumber () < m_txBuffer->HeadSequence ())
-    { // Case 1: Old ACK, ignored.
+  if (tcpHeader.GetAckNumber () < m_txBuffer->HeadSequence ())
+    {
+      // Case 1: Old ACK, ignored.
       NS_LOG_LOGIC ("Ignored ack of " << tcpHeader.GetAckNumber ());
+
+      // TODO: RFC 5961 5.2 [Blind Data Injection Attack].[Mitigation]
+    }
+  else if (tcpHeader.GetAckNumber() > m_nextTxSequence)
+    {
+      // If the ack includes data we haven't sent yet, discard the segment
+      // (RFC793 Section 3.9)
+      NS_LOG_LOGIC ("Ignored ack of " << tcpHeader.GetAckNumber ());
+
+      // TODO: What if the segment contains data?
     }
   else if (tcpHeader.GetAckNumber () == m_txBuffer->HeadSequence ())
     { // Case 2: Potentially a duplicated ACK
@@ -1195,7 +1206,7 @@ TcpSocketBase::ReceivedAck (Ptr<Packet> packet, const TcpHeader& tcpHeader)
       NS_ASSERT (tcpHeader.GetAckNumber () <= m_nextTxSequence);
     }
   else if (tcpHeader.GetAckNumber () > m_txBuffer->HeadSequence ())
-    { // Case 3: New ACK, reset m_dupAckCount and update m_txBuffer
+    { // Case 3: New ACK, reset m_dupAckCount
       NS_LOG_LOGIC ("New ack of " << tcpHeader.GetAckNumber ());
       NewAck (tcpHeader.GetAckNumber ());
       m_dupAckCount = 0;
@@ -2243,6 +2254,12 @@ TcpSocketBase::EstimateRtt (const TcpHeader& tcpHeader)
     }
 }
 
+void
+TcpSocketBase::DupAck(const TcpHeader &tcpHeader, uint32_t count)
+{
+  // TODO: To implement or to remove
+}
+
 // Called by the ReceivedAck() when new ACK received and by ProcessSynRcvd()
 // when the three-way handshake completed. This cancels retransmission timer
 // and advances Tx window
@@ -2250,6 +2267,24 @@ void
 TcpSocketBase::NewAck (SequenceNumber32 const& ack)
 {
   NS_LOG_FUNCTION (this << ack);
+
+  uint32_t bytesAcked = ack - m_txBuffer->HeadSequence ();
+  uint32_t segsAcked  = bytesAcked / m_sState->m_segmentSize;
+  m_bytesAckedNotProcessed += bytesAcked % m_sState->m_segmentSize;
+
+  if (m_bytesAckedNotProcessed >= m_sState->m_segmentSize)
+    {
+      segsAcked += 1;
+      m_bytesAckedNotProcessed -= m_sState->m_segmentSize;
+    }
+
+  NS_LOG_LOGIC ("TCP " << this << " NewAck " << ack <<
+                " numberAck " << bytesAcked); // Number bytes ack'ed
+
+  for (uint32_t i=0; i<segsAcked; ++i)
+    {
+      m_congestionControl->NewAck (m_sState);
+    }
 
   if (m_state != SYN_RCVD)
     { // Set RTO unless the ACK is received in SYN_RCVD state
@@ -2278,8 +2313,7 @@ TcpSocketBase::NewAck (SequenceNumber32 const& ack)
       NS_ASSERT (m_persistTimeout == Simulator::GetDelayLeft (m_persistEvent));
     }
   // Note the highest ACK and tell app to send more
-  NS_LOG_LOGIC ("TCP " << this << " NewAck " << ack <<
-                " numberAck " << (ack - m_txBuffer->HeadSequence ())); // Number bytes ack'ed
+
   m_txBuffer->DiscardUpTo (ack);
   if (GetTxAvailable () > 0)
     {
@@ -2812,6 +2846,12 @@ void
 TcpSocketBase::SetCongestionControlAlgorithm (Ptr<TcpCongestionOps> algo)
 {
   m_congestionControl = algo;
+}
+
+Ptr<TcpSocketBase>
+TcpSocketBase::Fork (void)
+{
+  return CopyObject<TcpSocketBase> (this);
 }
 
 //RttHistory methods

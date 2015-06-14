@@ -40,8 +40,9 @@
 #include "ipv6-l3-protocol.h"
 #include "ipv6-routing-protocol.h"
 #include "tcp-socket-factory-impl.h"
-#include "tcp-newreno.h"
 #include "rtt-estimator.h"
+#include "tcp-socket-base.h"
+#include "tcp-congestion-ops.h"
 
 #include <vector>
 #include <sstream>
@@ -177,10 +178,16 @@ TcpL4Protocol::CreateSocket (TypeId socketTypeId)
   NS_LOG_FUNCTION_NOARGS ();
   ObjectFactory rttFactory;
   ObjectFactory socketFactory;
-  rttFactory.SetTypeId (m_rttTypeId);
-  socketFactory.SetTypeId (socketTypeId);
-  Ptr<RttEstimator> rtt = rttFactory.Create<RttEstimator> ();
+  ObjectFactory congFactory;
+
+  socketFactory.SetTypeId ("ns3::TcpSocketBase");
+  congFactory.SetTypeId (m_socketTypeId);
+
   Ptr<TcpSocketBase> socket = socketFactory.Create<TcpSocketBase> ();
+  socket->SetCongestionControlAlgorithm(congFactory.Create<TcpCongestionOps> ());
+
+  rttFactory.SetTypeId (m_rttTypeId);
+  Ptr<RttEstimator> rtt = rttFactory.Create<RttEstimator> ();
   socket->SetNode (m_node);
   socket->SetTcp (this);
   socket->SetRtt (rtt);
